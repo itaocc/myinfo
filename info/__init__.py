@@ -46,7 +46,7 @@ def create_app(config_name):
 
     Session(app)  # 初始化拓展session对象
 
-    # 蓝图注册
+    # 首页蓝图注册
     from info.modules.index import index_bp
     app.register_blueprint(index_bp)
 
