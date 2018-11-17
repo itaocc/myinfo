@@ -50,5 +50,9 @@ def create_app(config_name):
     from info.modules.index import index_bp
     app.register_blueprint(index_bp)
 
+    # 登录蓝图注册
+    from info.modules.passport import passport_bp
+    app.register_blueprint(passport_bp)
+
     return app
 
