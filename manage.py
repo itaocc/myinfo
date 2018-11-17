@@ -1,6 +1,9 @@
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
-from info import create_app, db
+from info import create_app, db, models
+from pymysql import install_as_MySQLdb
+install_as_MySQLdb()
+
 
 app = create_app("development")
 
