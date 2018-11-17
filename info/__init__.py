@@ -29,7 +29,7 @@ def setup_log(config_name):
 
 def create_app(config_name):
     """封装app创建的方法"""
-    setup_log()
+    setup_log(config_name)
     app = Flask(__name__)
 
     # 配置
@@ -45,6 +45,10 @@ def create_app(config_name):
     csrf = CSRFProtect(app)  # 初始化csrf保护机制
 
     Session(app)  # 初始化拓展session对象
+
+    # 蓝图注册
+    from info.modules.index import index_bp
+    app.register_blueprint(index_bp)
 
     return app
 

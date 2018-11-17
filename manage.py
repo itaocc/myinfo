@@ -9,11 +9,5 @@ manager = Manager(app)  # 创建管理对象
 Migrate(app, db)  # 创建迁移对象
 manager.add_command('db', MigrateCommand)  # 迁移命令
 
-
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
-
-
 if __name__ == '__main__':
     manager.run()
