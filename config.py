@@ -1,4 +1,4 @@
-import redis
+import redis, logging
 
 
 class Config(object):
@@ -21,6 +21,8 @@ class Config(object):
     SESSION_REDIS = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)  # 使用 redis 的实例
     PERMANENT_SESSION_LIFETIME = 86400  # session 的有效期，单位是秒
 
+    # 默认日志等级
+    LOG_LEVEL = logging.DEBUG
 
 class DevelopmentConfig(Config):
     """开发环境的项目配置"""
@@ -29,7 +31,7 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     """生产环境的项目配置"""
-    pass
+    LOG_LEVEL = logging.WARNING
 
 
 # 定义配置字典, 提供接口给外界使用
