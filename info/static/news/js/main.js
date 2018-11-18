@@ -150,7 +150,38 @@ $(function(){
             return;
         }
 
+         // 组织数据 js对象
+        var params = {
+            "mobile": mobile,
+            "smscode": smscode,
+            "password": password
+
+        }
         // 发起注册请求
+        $.ajax({
+            url: "/passport/register",
+            type: 'POST',
+            // js对象转换成json字符串
+            data: JSON.stringify(params),
+            contentType: "application/json",
+            dataType: 'json',
+            headers:{
+             "X-CSRFToken": getCookie("csrf_token")
+            },
+            // 回调函数
+            success: function (resp) {
+                if(resp.errno == '0'){
+                    // 注册成功
+                    // 刷新页面 隐藏注册表单
+                    window.location.reload()
+                }else{
+                    // 注册错误提示
+                    $("#register-password-err").html(resp.errmsg)
+                    $("#register-password-err").show()
+                }
+            }
+
+        })
 
     })
 })
