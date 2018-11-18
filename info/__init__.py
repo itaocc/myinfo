@@ -3,6 +3,7 @@ from logging.handlers import RotatingFileHandler
 import redis, logging
 from flask import Flask
 from flask_session import Session
+from flask_wtf.csrf import generate_csrf
 
 from config import config_dict
 from flask_sqlalchemy import SQLAlchemy
@@ -42,7 +43,17 @@ def create_app(config_name):
     redis_store = redis.StrictRedis(host=config_class.REDIS_HOST, port=config_class.REDIS_PORT)
 
     # csrf-token
-    # csrf = CSRFProtect(app)  # 初始化csrf保护机制
+    csrf = CSRFProtect(app)  # 初始化csrf保护机制
+
+    # 使用钩子函数统一设置cookie值
+    @app.after_request
+    def set_csrftoken(response):
+        # 1.生成csrf_token随机值
+        csrf_token = generate_csrf()
+        # 2.借助response对象设置csrf_token值到cookie中
+        response.set_cookie("csrf_token", csrf_token)
+        # 3.返回响应对象
+        return response
 
     Session(app)  # 初始化拓展session对象
 
@@ -50,7 +61,7 @@ def create_app(config_name):
     from info.modules.index import index_bp
     app.register_blueprint(index_bp)
 
-    # 登录蓝图注册
+    # 登录, 注册模块蓝图注册
     from info.modules.passport import passport_bp
     app.register_blueprint(passport_bp)
 

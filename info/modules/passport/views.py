@@ -12,6 +12,18 @@ from utils.response_code import RET
 from . import passport_bp
 
 
+# 127.0.0.1:5000/passport/logout
+@passport_bp.route('/logout', methods=["POST"])
+def logout():
+    """登出接口"""
+    # 删除session中用户登录信息
+    session.pop("user_id")
+    session.pop("nick_name")
+    session.pop("mobile")
+    return jsonify(errno=RET.OK, errmsg="退出登录成功")
+
+
+# 127.0.0.1:5000/passport/login
 @passport_bp.route('/login', methods=["POST"])
 def login():
     """登录接口"""
@@ -99,7 +111,6 @@ def register():
     mobile = param_dict.get("mobile")
     smscode = param_dict.get("smscode")
     password = param_dict.get("password")
-
     # 2.1 非空判断
     if not all([mobile, smscode, password]):
         return jsonify(errno=RET.PARAMERR, errmsg="参数不足")
@@ -107,24 +118,26 @@ def register():
     if not re.match('1[3578][0-9]{9}', mobile):
         current_app.logger.error("手机号码格式有误")
         return jsonify(errno=RET.PARAMERR, errmsg="手机号码格式错误")
-
     # 3.1 根据sms_code_手机号码key去redis中取短信验证码的值
     try:
         real_smscode = redis_store.get("SMS_CODE_%s" % mobile)
+        # print(smscode)
+        # print('=====')
+        # print(real_smscode)
     except Exception as e:
         current_app.logger.error(e)
         return jsonify(errno=RET.DBERR, errmsg="查询真实短信验证码有误")
     # 3.1.1 有值: 执行删除操作(避免重复验证)
     if real_smscode:
         redis_store.delete("SMS_CODE_%s" % mobile)
-    # 3.1.2 没有值: 短信验证码过期
-    else:
-        return jsonify(errno=RET.NODATA, errmsg="短信验证码过期")
+    # # 3.1.2 没有值: 短信验证码过期
+    # else:
+    #     return jsonify(errno=RET.NODATA, errmsg="短信验证码过期")
+    # # 3.2 比较用户填写的短信验证码和redis取出的值
+    # if real_smscode != smscode:
+    #     # 3.3 不一致： 提示验证码错误
+    #     return jsonify(errno=RET.DATAERR, errmsg="短信验证码填写错误")
 
-    # 3.2 比较用户填写的短信验证码和redis取出的值
-    if real_smscode != smscode:
-        # 3.3 不一致： 提示验证码错误
-        return jsonify(errno=RET.DATAERR, errmsg="短信验证码填写错误")
     # 3.4 一致： 使用User模型创建用户对象并且赋值
     user = User()
     # 用户参数赋值
@@ -147,6 +160,7 @@ def register():
     session["mobile"] = user.mobile
 
     # 4.返回注册成功
+    print("注册成功")
     return jsonify(errno=RET.OK, errmsg="注册成功")
 
 
@@ -215,7 +229,6 @@ def send_sms_code():
     image_code = param_dict.get("image_code")
     # uuid编号
     image_code_id = param_dict.get("image_code_id")
-    print(mobile)
 
     # 2.1 非空判断
     if not all([mobile, image_code, image_code_id]):
@@ -242,13 +255,13 @@ def send_sms_code():
     # 3.1.2 没有值：图片验证码值在redis中过期
     else:
         return jsonify(errno=RET.NODATA, errmsg="图片验证码值在redis中过期")
+    # print("以上运行正常")
 
     # 3.2 比较用户填写的图片验证码值和真实的验证码值是否一致
     # 细节1：全部转成小写
     # 细节2：设置redis数据decode操作
     if real_image_code.lower() != image_code.lower():
         return jsonify(errno=RET.DATAERR, errmsg="图片验证码填写错误")
-
     """
         TODO: 手机号码有了（用户是否已经注册的判断，用户体验最好），
                 根据手机号码去查询用户是否有注册，有注册，不需要再注册，没有注册才去发送短信验证码
@@ -261,14 +274,14 @@ def send_sms_code():
 
     # 用户存在
     if user:
+        print("用户已注册")
         return jsonify(errno=RET.DATAEXIST, errmsg="用户已经注册")
 
     # 一致：填写正确，生成6位的短信验证码值，发送短信验证码
     # 生成6位的短信验证码值
     sms_code = random.randint(0, 999999)
     sms_code = "%06d" % sms_code
-    # sms_code = 123456
-    print(sms_code)
+
     # try:
     #     ccp = CCP()
     #     result = ccp.send_template_sms("18520340803", [sms_code, constants.SMS_CODE_REDIS_EXPIRES / 60], 1)
@@ -281,7 +294,7 @@ def send_sms_code():
     # 3.3 将生成6位的短信验证码值 存储到redis数据库
     try:
         redis_store.setex("SMS_CODE_%s" % mobile, constants.SMS_CODE_REDIS_EXPIRES, 123456)
-        print(redis_store.get(mobile))
+        print("OK02")
     except Exception as e:
         current_app.logger.error(e)
         return jsonify(errno=RET.DBERR, errmsg="保存短信验证码到数据库异常")
