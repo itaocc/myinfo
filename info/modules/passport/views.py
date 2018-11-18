@@ -1,4 +1,5 @@
 import random
+import re, json
 
 from flask import request, abort, current_app, make_response, jsonify
 
@@ -46,9 +47,9 @@ def get_image_code():
     return response
 
 
-#127.0.0.1:5000/passport/sms_code
+# 127.0.0.1:5000/passport/sms_code
 @passport_bp.route('/sms_code')
-def send_sms():
+def send_sms_code():
     """点击发送短信验证码后端接口"""
     """
    1.获取参数
@@ -58,7 +59,7 @@ def send_sms():
        2.2 判断手机格式是否正确
    3.逻辑处理
        3.1 根据用户请求的uuid取redis存储的验证码真实值
-           3.1.1 有值: 从redis数据库中删除真实值
+           3.1.1 有值: 从redis数据库中删除真实值(防止多次验证)
            3.1.2 无值: 图片验证码值过期
        3.2 用户填写的image_code和真实值比较是否一致
            TODO:先查询当前手机号是否注册, 没有注册才发送短信验证码; 反之不需注册
@@ -67,13 +68,15 @@ def send_sms():
    4.返回值    
        4.1 返回图片给前端
    """
-    param_dict = request.json
+    # param_dict = request.json
+    param_dict = json.loads(request.data)
     # 手机号码
-    mobile = param_dict.get("mobile", "")
+    mobile = param_dict.get("mobile")
     # 用户填写的图片验证值
-    image_code = param_dict.get("image_code", "")
+    image_code = param_dict.get("image_code")
     # uuid编号
-    image_code_id = param_dict.get("image_code_id", "")
+    image_code_id = param_dict.get("image_code_id")
+    print(mobile)
 
     # 2.1 非空判断
     if not all([mobile, image_code, image_code_id]):
@@ -105,7 +108,7 @@ def send_sms():
     # 细节1：全部转成小写
     # 细节2：设置redis数据decode操作
     if real_image_code.lower() != image_code.lower():
-        return jsonify(errno=RET.PARAMERR, errmsg="图片验证码填写错误")
+        return jsonify(errno=RET.DATAERR, errmsg="图片验证码填写错误")
 
     """
         TODO: 手机号码有了（用户是否已经注册的判断，用户体验最好），
@@ -125,17 +128,21 @@ def send_sms():
     # 生成6位的短信验证码值
     sms_code = random.randint(0, 999999)
     sms_code = "%06d" % sms_code
-
-    try:
-        ccp = CCP()
-        ccp.send_template_sms("18520340803", [sms_code, constants.SMS_CODE_REDIS_EXPIRES / 60], 1)
-    except Exception as e:
-        current_app.logger.error(e)
-        return jsonify(errno=RET.THIRDERR, errmsg="云通讯发送短信验证码失败")
+    # sms_code = 123456
+    print(sms_code)
+    # try:
+    #     ccp = CCP()
+    #     result = ccp.send_template_sms("18520340803", [sms_code, constants.SMS_CODE_REDIS_EXPIRES / 60], 1)
+    # except Exception as e:
+    #     current_app.logger.error(e)
+    #     return jsonify(errno=RET.THIRDERR, errmsg="云通讯发送短信验证码失败")
+    # if result != 0:
+    #     return jsonify(errno=RET.THIRDERR, errmsg="云通讯发送短信验证码失败")
 
     # 3.3 将生成6位的短信验证码值 存储到redis数据库
     try:
-        redis_store.setex("SMS_CODE_%s" % mobile, constants.SMS_CODE_REDIS_EXPIRES, sms_code)
+        redis_store.setex("SMS_CODE_%s" % mobile, constants.SMS_CODE_REDIS_EXPIRES, 123456)
+        print(redis_store.get(mobile))
     except Exception as e:
         current_app.logger.error(e)
         return jsonify(errno=RET.DBERR, errmsg="保存短信验证码到数据库异常")
