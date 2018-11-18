@@ -48,7 +48,7 @@ def get_image_code():
 
 
 # 127.0.0.1:5000/passport/sms_code
-@passport_bp.route('/sms_code')
+@passport_bp.route('/sms_code', methods=['POST'])
 def send_sms_code():
     """点击发送短信验证码后端接口"""
     """
@@ -149,3 +149,4 @@ def send_sms_code():
 
     # 4.返回值
     return jsonify(errno=RET.OK, errmsg="发送短信验证码成功")
+
